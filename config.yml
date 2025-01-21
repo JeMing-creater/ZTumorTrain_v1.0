@@ -20,20 +20,18 @@ trainer:
   weight_decay_end: 0.04
 
 finetune:
-  checkpoint: SppSlim
+  checkpoint: HWAUNETR
 
 loader:
   train_ratio: 0.8
   num_workers: 0
   dataPath: /workspace/Jeming/MR/data/
-  # checkModels: ['A', 'ADC', 'T2_FS', 'V', 'DWI', 'P']
   checkModels: ['ADC', 'T2_FS']
-  # model_scale: [[0,4500],[0,4500]] # 对应模态的最小最大像素值，用于归一化
   model_scale: [[0,4500],[0,6000]] # 对应模态的最小最大像素值，用于归一化
   target_size: [128, 128, 64]
 
 visualization:
-  image_path: img
+  image_path: /workspace/Jeming/image/
   for_single: False
   choose_dir: NonsurgicalMR
   choose_image: '0000095438'

@@ -17,9 +17,9 @@ from timm.optim import optim_factory
 from src import utils
 from src.loader import get_dataloader,read_usedata,load_MR_dataset_images
 from src.optimizer import LinearWarmupCosineAnnealingLR
-from src.utils import Logger, resume_train_state
+from src.utils import Logger, resume_train_state, data_check
 
-from model.HWAUNETR import HWAUNETR
+from src.model.HWAUNETR import HWAUNETR
 from visualization import visualize_for_all
 # os.environ["CUDA_VISIBLE_DEVICES"] = "4"
 
@@ -119,8 +119,24 @@ def val_one_epoch(model: torch.nn.Module,
 
 
 if __name__ == '__main__':
+    print('Program star!')
+    
     config = EasyDict(yaml.load(open('config.yml', 'r', encoding="utf-8"), Loader=yaml.FullLoader))
     utils.same_seeds(50)
+    
+    
+    dataPath = input("Please input data path: ")
+    image_path = input("Please input image save path: ")
+    
+    config.loader.dataPath = dataPath
+    config.data_check.dataPath1 = dataPath + '/' + 'NonsurgicalMR'
+    config.data_check.dataPath2 = dataPath + '/' + 'SurgicalMR'
+    config.data_check.writePath = dataPath
+    config.visualization.image_path = image_path
+    
+    print('Data checking!')
+    data_check(config)
+    
     logging_dir = os.getcwd() + '/logs/' + str(datetime.now())
     accelerator = Accelerator(cpu=False, log_with=["tensorboard"], project_dir=logging_dir)
     Logger(logging_dir if accelerator.is_local_main_process else None)
