@@ -15,12 +15,11 @@ from objprint import objstr
 from timm.optim import optim_factory
 
 from src import utils
-from src.loader import get_dataloader,read_usedata,load_MR_dataset_images
+from src.loader import get_dataloader,read_usedata,load_MR_dataset_images, get_transforms
 from src.optimizer import LinearWarmupCosineAnnealingLR
-from src.utils import Logger, resume_train_state, data_check
+from src.utils import Logger, resume_train_state, data_check, visualize_for_all
 
 from src.model.HWAUNETR import HWAUNETR
-from visualization import visualize_for_all
 # os.environ["CUDA_VISIBLE_DEVICES"] = "4"
 
 def train_one_epoch(model: torch.nn.Module, loss_functions: Dict[str, torch.nn.modules.loss._Loss],
@@ -229,7 +228,7 @@ if __name__ == '__main__':
     data2 = load_MR_dataset_images(datapath2, usedata2, use_models)
     
     data = data1 + data2
-    
-    visualize_for_all(config=config, image_list=data, model = model, accelerator = accelerator)
+    load_transform, _, _ = get_transforms(config=config)
+    visualize_for_all(config=config, image_list=data, model = model, accelerator = accelerator, load_transform=load_transform)
     sys.exit(1)
 

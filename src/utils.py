@@ -3,6 +3,7 @@ import random
 import sys
 from collections import OrderedDict
 
+import monai
 import math
 import numpy as np
 import torch
@@ -446,3 +447,75 @@ def data_check(config):
     dataPath2 = config.data_check.dataPath2
     all_result2 = check(config.data_check, dataPath2, checkModels)
     write_result(config.data_check, writePath+'/'+'SurgicalMR.txt', all_result2)
+
+@torch.no_grad()
+def visualize_for_all(config, image_list, model, accelerator, load_transform):
+    model.eval()
+    for i in range(len(image_list)):
+        visualization_choose_image = image_list[i]['image'][0].split('/')[-1].replace('.nii.gz','')
+        visualization_choose_dir   = ''
+        for word in image_list[i]['image'][0].split('/'):
+            if 'urgical' in word:
+                visualization_choose_dir   = word
+        choose_image = config.loader.dataPath + '/' + visualization_choose_dir + '/' + f'{visualization_choose_image}'
+        
+        
+        accelerator.print('visualize for image: ', choose_image)
+
+    
+        images = []
+        labels = []
+        image_size = []
+        affines = []
+        for i in range(len(config.loader.checkModels)):
+            image_path = choose_image + '/' + config.loader.checkModels[i] + '/' + f'{visualization_choose_image}.nii.gz'
+            label_path = choose_image + '/' + config.loader.checkModels[i] + '/' + f'{visualization_choose_image}seg.nii.gz'
+            
+            batch = load_transform[i]({
+                'image': image_path,
+                'label': label_path
+            })
+            images.append(batch['image'].unsqueeze(1))
+            labels.append(batch['label'].unsqueeze(1))
+            image_size.append(tuple(batch['image_meta_dict']['spatial_shape'][i].item() for i in range(3)))
+            affines.append(batch['label_meta_dict']['affine'])
+            
+        image_tensor = torch.cat(images, dim=1)
+        label_tensor = torch.cat(labels, dim=1)
+        
+        inference = monai.inferers.SlidingWindowInferer(roi_size=config.loader.target_size, overlap=0.5,
+                                                        sw_device=accelerator.device, device=accelerator.device)
+        post_trans = monai.transforms.Compose([
+            monai.transforms.Activations(sigmoid=True), monai.transforms.AsDiscrete(threshold=0.5)
+        ])
+        
+        img = inference(image_tensor.to(accelerator.device), model.to(accelerator.device))
+        seg = post_trans(img[0])
+        
+        for i in range(len(config.loader.checkModels)):
+            seg_now = monai.transforms.Resize(spatial_size=image_size[i], mode=("nearest-exact"))(seg[i].unsqueeze(0))
+            seg_now = seg_now[0]
+            affine = affines[i]
+            seg_out = np.zeros((seg_now.shape[0], seg_now.shape[1], seg_now.shape[2]))
+            
+            seg_now = seg_now.cpu()
+            seg_out[seg_now==1] = 1
+            res = nib.Nifti1Image(seg_out.astype(np.uint8), affine)
+            
+            save_path  = config.visualization.image_path + '/' + config.visualization.choose_dir + '/' + f'{config.visualization.choose_image}' + '/' + config.loader.checkModels[i]
+            ensure_directory_exists(save_path)
+            picture = nib.load(choose_image + '/' + config.loader.checkModels[i] + '/' + f'{visualization_choose_image}seg.nii.gz')
+            
+            qform = picture.get_qform()
+            res.set_qform(qform)
+            sfrom = picture.get_sform()
+            res.set_sform(sfrom)
+            
+            original_str = f"{save_path}/{visualization_choose_image}inference.nii.gz"
+
+            print('save ', original_str)
+            # 然后保存 NIFTI 图像
+            nib.save(
+                res,
+                original_str,
+            )
