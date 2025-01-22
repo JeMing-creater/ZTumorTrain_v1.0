@@ -339,16 +339,10 @@ def Unitconversion(flops, params, throughout):
     print('throughout: {} FPS'.format(throughout))
 
 if __name__ == '__main__':
-    device = 'cuda:4'
-    # x = torch.randn(size=(1, 4, 96, 96, 96)).to(device)
-    # x = torch.randn(size=(1, 4, 128, 128, 128)).to(device)
+    device = 'cuda'
     x = torch.randn(size=(4, 2, 128, 128, 64)).to(device)
-    # model = SegMamba(in_chans=4,out_chans=3).to(device)
     
     model = HWAUNETR(in_chans=2, out_chans=2, fussion = [1, 2, 4, 8], kernel_sizes=[4, 2, 2, 2], depths=[1, 1, 1, 1], dims=[48, 96, 192, 384], heads=[1, 2, 4, 4], hidden_size=768, num_slices_list = [64, 32, 16, 8], out_indices=[0, 1, 2, 3]).to(device)
     
-    # model = SppFusion().to(device)
-    
     print(model(x).shape)
-    # flops, param, throughout = test_weight(model, x)
-    # Unitconversion(flops, param, throughout)
+    

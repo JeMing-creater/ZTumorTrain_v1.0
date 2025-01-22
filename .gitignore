@@ -1,8 +1,12 @@
 img
 data
 logs
+dist
+build
 SegMamba
 __pycache__
+MR_v1.0.spec
+main.spec
 model_store
 src/__pycache__
 src/model/__pycache__
